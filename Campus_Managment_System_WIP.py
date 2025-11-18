@@ -1,163 +1,241 @@
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox   # <-- Needed for popup messages
 
-# --------------------------
-# Setup theme
-# --------------------------
-ctk.set_appearance_mode("dark")   # Options: "light", "dark", "system"
-ctk.set_default_color_theme("blue")  # You can also try: "green", "dark-blue"
-
-# --------------------------
-# Mock user data (temporary)
-# --------------------------
+# Temporary in-memory user database
 users = {
-    "admin@example.com": {"password": "admin123", "role": "Admin"},
+    "test@example.com": {"first": "Test", "last": "User", "password": "1234", "role": "user"}
 }
 
-# --------------------------
-# Utility function
-# --------------------------
-def clear_window():
-    for widget in app.winfo_children():
-        widget.destroy()
+# Event database
+events = {
+    "Python Workshop": {"capacity": 30, "registered": 12},
+    "Robotics Show": {"capacity": 100, "registered": 77},
+    "AI Seminar": {"capacity": 50, "registered": 49},
+    "Cloud Computing Lab": {"capacity": 25, "registered": 5},
+}
 
-# --------------------------
-# LOGIN SCREEN
-# --------------------------
-def show_login():
-    clear_window()
-    app.title("Sign In")
+# Store registrations
+user_registrations = {}
 
-    frame = ctk.CTkFrame(app, corner_radius=15)
-    frame.place(relx=0.5, rely=0.5, anchor="center")
 
-    ctk.CTkLabel(frame, text="Sign In", font=("Arial", 28, "bold")).grid(row=0, column=0, columnspan=2, pady=(20, 30))
+# ------------------------------
+# MAIN APPLICATION
+# ------------------------------
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
 
-    ctk.CTkLabel(frame, text="Email:", font=("Arial", 16)).grid(row=1, column=0, pady=10, padx=20, sticky="e")
-    email_entry = ctk.CTkEntry(frame, width=300, placeholder_text="Enter your email")
-    email_entry.grid(row=1, column=1, pady=10, padx=20)
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
 
-    ctk.CTkLabel(frame, text="Password:", font=("Arial", 16)).grid(row=2, column=0, pady=10, padx=20, sticky="e")
-    password_entry = ctk.CTkEntry(frame, width=300, show="*", placeholder_text="Enter your password")
-    password_entry.grid(row=2, column=1, pady=10, padx=20)
+        self.title("Event Registration System")
+        self.geometry("1400x900")
+        self.resizable(True, True)
 
-    def login():
-        email = email_entry.get()
-        password = password_entry.get()
+        self.current_user = None
+
+        self.login_page()
+
+    # ------------------------------
+    # LOGIN PAGE
+    # ------------------------------
+    def login_page(self):
+        self.clear_window()
+
+        frame = ctk.CTkFrame(self, width=600, height=400, corner_radius=20)
+        frame.place(relx=0.5, rely=0.5, anchor="center")
+
+        title = ctk.CTkLabel(frame, text="Sign In", font=("Arial", 32, "bold"))
+        title.pack(pady=20)
+
+        self.login_email = ctk.CTkEntry(frame, placeholder_text="Email", width=350)
+        self.login_email.pack(pady=10)
+
+        self.login_password = ctk.CTkEntry(frame, placeholder_text="Password", width=350, show="*")
+        self.login_password.pack(pady=10)
+
+        login_btn = ctk.CTkButton(frame, text="Login", command=self.login_user)
+        login_btn.pack(pady=20)
+
+        create_btn = ctk.CTkButton(frame, text="Create Account", fg_color="#3a6ea5",
+                                   command=self.create_account_page)
+        create_btn.pack(pady=5)
+
+        forgot_btn = ctk.CTkButton(frame, text="Forgot Password?", fg_color="gray20",
+                                   command=self.forgot_password_page)
+        forgot_btn.pack(pady=5)
+
+    # Login logic
+    def login_user(self):
+        email = self.login_email.get()
+        password = self.login_password.get()
+
         if email in users and users[email]["password"] == password:
-            role = users[email]["role"]
-            messagebox.showinfo("Success", f"Welcome {email}! Role: {role}")
-            if role == "Admin":
-                show_admin_panel()
+            self.current_user = email
+            if email not in user_registrations:
+                user_registrations[email] = set()
+            self.dashboard_page()
         else:
-            messagebox.showerror("Error", "Invalid email or password.")
+            messagebox.showerror("Error", "Invalid email or password")
 
-    ctk.CTkButton(frame, text="Sign In", width=200, command=login).grid(row=3, column=0, columnspan=2, pady=25)
+    # ------------------------------
+    # CREATE ACCOUNT PAGE
+    # ------------------------------
+    def create_account_page(self):
+        self.clear_window()
 
-    bottom_frame = ctk.CTkFrame(frame, fg_color="transparent")
-    bottom_frame.grid(row=4, column=0, columnspan=2, pady=10)
+        frame = ctk.CTkFrame(self, width=650, height=550, corner_radius=20)
+        frame.place(relx=0.5, rely=0.5, anchor="center")
 
-    ctk.CTkButton(bottom_frame, text="Create Account", width=140, command=show_create_account).grid(row=0, column=0, padx=15)
-    ctk.CTkButton(bottom_frame, text="Forgot Password", width=140, command=show_forgot_password).grid(row=0, column=1, padx=15)
+        title = ctk.CTkLabel(frame, text="Create Account", font=("Arial", 30, "bold"))
+        title.pack(pady=20)
 
-# --------------------------
-# CREATE ACCOUNT
-# --------------------------
-def show_create_account():
-    clear_window()
-    app.title("Create Account")
+        self.first_entry = ctk.CTkEntry(frame, placeholder_text="First Name", width=350)
+        self.first_entry.pack(pady=10)
 
-    frame = ctk.CTkFrame(app, corner_radius=15)
-    frame.place(relx=0.5, rely=0.5, anchor="center")
+        self.last_entry = ctk.CTkEntry(frame, placeholder_text="Last Name", width=350)
+        self.last_entry.pack(pady=10)
 
-    ctk.CTkLabel(frame, text="Create Account", font=("Arial", 28, "bold")).grid(row=0, column=0, columnspan=2, pady=(20, 30))
+        self.email_entry = ctk.CTkEntry(frame, placeholder_text="Email", width=350)
+        self.email_entry.pack(pady=10)
 
-    fields = ["First Name", "Last Name", "Email", "Password"]
-    entries = {}
+        self.password_entry = ctk.CTkEntry(frame, placeholder_text="Password", width=350, show="*")
+        self.password_entry.pack(pady=10)
 
-    for i, label in enumerate(fields):
-        ctk.CTkLabel(frame, text=f"{label}:", font=("Arial", 16)).grid(row=i+1, column=0, pady=10, padx=20, sticky="e")
-        entry = ctk.CTkEntry(frame, width=300, placeholder_text=f"Enter your {label.lower()}")
-        if label == "Password":
-            entry.configure(show="*")
-        entry.grid(row=i+1, column=1, pady=10, padx=20)
-        entries[label] = entry
+        create_btn = ctk.CTkButton(frame, text="Create", command=self.create_account)
+        create_btn.pack(pady=20)
 
-    def create_account():
-        fname = entries["First Name"].get()
-        lname = entries["Last Name"].get()
-        email = entries["Email"].get()
-        password = entries["Password"].get()
+        back_btn = ctk.CTkButton(frame, text="Back", fg_color="gray20",
+                                 command=self.login_page)
+        back_btn.pack(pady=10)
 
-        if not all([fname, lname, email, password]):
-            messagebox.showwarning("Warning", "All fields are required.")
-        elif email in users:
-            messagebox.showwarning("Warning", "Email already exists.")
-        else:
-            users[email] = {"password": password, "role": "User"}
-            messagebox.showinfo("Success", "Account created successfully!")
-            show_login()
+    def create_account(self):
+        first = self.first_entry.get()
+        last = self.last_entry.get()
+        email = self.email_entry.get()
+        password = self.password_entry.get()
 
-    ctk.CTkButton(frame, text="Create Account", width=200, command=create_account).grid(row=6, column=0, columnspan=2, pady=25)
-    ctk.CTkButton(frame, text="Back to Login", width=200, fg_color="gray", hover_color="dimgray", command=show_login).grid(row=7, column=0, columnspan=2, pady=(0, 20))
+        # Validate fields
+        if not all([first, last, email, password]):
+            messagebox.showerror("Error", "All fields required.")
+            return
 
-# --------------------------
-# FORGOT PASSWORD
-# --------------------------
-def show_forgot_password():
-    clear_window()
-    app.title("Reset Password")
-
-    frame = ctk.CTkFrame(app, corner_radius=15)
-    frame.place(relx=0.5, rely=0.5, anchor="center")
-
-    ctk.CTkLabel(frame, text="Reset Password", font=("Arial", 28, "bold")).grid(row=0, column=0, columnspan=2, pady=(20, 30))
-
-    ctk.CTkLabel(frame, text="Email:", font=("Arial", 16)).grid(row=1, column=0, pady=10, padx=20, sticky="e")
-    email_entry = ctk.CTkEntry(frame, width=300, placeholder_text="Enter your email")
-    email_entry.grid(row=1, column=1, pady=10, padx=20)
-
-    ctk.CTkLabel(frame, text="New Password:", font=("Arial", 16)).grid(row=2, column=0, pady=10, padx=20, sticky="e")
-    new_pass_entry = ctk.CTkEntry(frame, width=300, show="*", placeholder_text="Enter new password")
-    new_pass_entry.grid(row=2, column=1, pady=10, padx=20)
-
-    def reset_password():
-        email = email_entry.get()
-        new_password = new_pass_entry.get()
+        # Check if email exists
         if email in users:
-            users[email]["password"] = new_password
-            messagebox.showinfo("Success", "Password updated successfully!")
-            show_login()
-        else:
+            messagebox.showerror("Error", "Account already exists.")
+            return
+
+        # Create user
+        users[email] = {
+            "first": first,
+            "last": last,
+            "password": password,
+            "role": "user"
+        }
+
+        messagebox.showinfo("Success", "Account created successfully!")
+
+        self.login_page()
+
+    # ------------------------------
+    # FORGOT PASSWORD PAGE
+    # ------------------------------
+    def forgot_password_page(self):
+        self.clear_window()
+
+        frame = ctk.CTkFrame(self, width=600, height=350, corner_radius=20)
+        frame.place(relx=0.5, rely=0.5, anchor="center")
+
+        title = ctk.CTkLabel(frame, text="Reset Password", font=("Arial", 28, "bold"))
+        title.pack(pady=20)
+
+        self.reset_email = ctk.CTkEntry(frame, placeholder_text="Enter your email")
+        self.reset_email.pack(pady=10)
+
+        reset_btn = ctk.CTkButton(frame, text="Send Reset Link", command=self.reset_password)
+        reset_btn.pack(pady=20)
+
+        back_btn = ctk.CTkButton(frame, text="Back", fg_color="gray20", command=self.login_page)
+        back_btn.pack(pady=10)
+
+    def reset_password(self):
+        email = self.reset_email.get()
+
+        if email not in users:
             messagebox.showerror("Error", "Email not found.")
+            return
 
-    ctk.CTkButton(frame, text="Update Password", width=200, command=reset_password).grid(row=3, column=0, columnspan=2, pady=25)
-    ctk.CTkButton(frame, text="Back to Login", width=200, fg_color="gray", hover_color="dimgray", command=show_login).grid(row=4, column=0, columnspan=2, pady=(0, 20))
+        messagebox.showinfo("Success", "Password reset instructions sent.")
+        self.login_page()
 
-# --------------------------
-# ADMIN PANEL
-# --------------------------
-def show_admin_panel():
-    clear_window()
-    app.title("Admin Panel")
+    # ------------------------------
+    # DASHBOARD PAGE
+    # ------------------------------
+    def dashboard_page(self):
+        self.clear_window()
 
-    frame = ctk.CTkFrame(app, corner_radius=15)
-    frame.place(relx=0.5, rely=0.5, anchor="center")
+        title = ctk.CTkLabel(self, text="Available Events", font=("Arial", 32, "bold"))
+        title.pack(pady=20)
 
-    ctk.CTkLabel(frame, text="Admin Panel", font=("Arial", 28, "bold")).grid(row=0, column=0, columnspan=2, pady=(20, 30))
+        scroll = ctk.CTkScrollableFrame(self, width=1000, height=700)
+        scroll.pack(pady=10)
 
-    for i, (email, info) in enumerate(users.items(), start=1):
-        ctk.CTkLabel(frame, text=f"{email} — Role: {info['role']}", font=("Arial", 16)).grid(row=i, column=0, columnspan=2, pady=5)
+        for event_name, data in events.items():
+            self.build_event_row(scroll, event_name, data)
 
-    ctk.CTkButton(frame, text="Back to Login", width=200, fg_color="gray", hover_color="dimgray", command=show_login).grid(row=i+1, column=0, columnspan=2, pady=30)
+        logout_btn = ctk.CTkButton(self, text="Logout", fg_color="red", command=self.login_page)
+        logout_btn.pack(pady=20)
 
-# --------------------------
-# APP SETUP
-# --------------------------
-app = ctk.CTk()
-app.geometry("1920x1080")
-app.title("Modern Login System")
-app.resizable(True, True)
+    def build_event_row(self, parent, event_name, data):
+        frame = ctk.CTkFrame(parent, height=100, corner_radius=15)
+        frame.pack(fill="x", padx=20, pady=10)
 
-show_login()
+        title = ctk.CTkLabel(frame, text=event_name, font=("Arial", 22, "bold"))
+        title.grid(row=0, column=0, padx=20, pady=20, sticky="w")
+
+        remaining = data["capacity"] - data["registered"]
+
+        spots = ctk.CTkLabel(frame, text=f"Available Spots: {remaining}", font=("Arial", 18))
+        spots.grid(row=0, column=1, padx=20)
+
+        user_events = user_registrations[self.current_user]
+
+        if event_name in user_events:
+            btn = ctk.CTkButton(frame, text="Cancel Registration",
+                                fg_color="red", hover_color="#992222",
+                                command=lambda e=event_name: self.cancel_event(e))
+        else:
+            btn = ctk.CTkButton(frame, text="Register",
+                                fg_color="green", hover_color="#0f6",
+                                command=lambda e=event_name: self.register_event(e))
+
+        btn.grid(row=0, column=2, padx=20)
+
+    # Register / Cancel logic
+    def register_event(self, event_name):
+        event = events[event_name]
+
+        if event["registered"] >= event["capacity"]:
+            messagebox.showerror("Full", "This event is full.")
+            return
+
+        event["registered"] += 1
+        user_registrations[self.current_user].add(event_name)
+        self.dashboard_page()
+
+    def cancel_event(self, event_name):
+        event = events[event_name]
+
+        event["registered"] -= 1
+        user_registrations[self.current_user].remove(event_name)
+        self.dashboard_page()
+
+    # Clear the window
+    def clear_window(self):
+        for widget in self.winfo_children():
+            widget.destroy()
+
+
+# Run app
+app = App()
 app.mainloop()
