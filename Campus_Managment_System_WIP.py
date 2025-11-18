@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from tkinter import messagebox   # <-- Needed for popup messages
+from tkinter import messagebox
 
 # Temporary in-memory user database
 users = {
@@ -14,7 +14,7 @@ events = {
     "Cloud Computing Lab": {"capacity": 25, "registered": 5},
 }
 
-# Store registrations
+# Store user registrations
 user_registrations = {}
 
 
@@ -30,7 +30,7 @@ class App(ctk.CTk):
 
         self.title("Event Registration System")
         self.geometry("1400x900")
-        self.resizable(True, True)
+        self.resizable(False, False)
 
         self.current_user = None
 
@@ -51,21 +51,26 @@ class App(ctk.CTk):
         self.login_email = ctk.CTkEntry(frame, placeholder_text="Email", width=350)
         self.login_email.pack(pady=10)
 
-        self.login_password = ctk.CTkEntry(frame, placeholder_text="Password", width=350, show="*")
+        self.login_password = ctk.CTkEntry(
+            frame, placeholder_text="Password", width=350, show="*"
+        )
         self.login_password.pack(pady=10)
 
         login_btn = ctk.CTkButton(frame, text="Login", command=self.login_user)
         login_btn.pack(pady=20)
 
-        create_btn = ctk.CTkButton(frame, text="Create Account", fg_color="#3a6ea5",
-                                   command=self.create_account_page)
+        create_btn = ctk.CTkButton(
+            frame, text="Create Account", fg_color="#3a6ea5",
+            command=self.create_account_page
+        )
         create_btn.pack(pady=5)
 
-        forgot_btn = ctk.CTkButton(frame, text="Forgot Password?", fg_color="gray20",
-                                   command=self.forgot_password_page)
+        forgot_btn = ctk.CTkButton(
+            frame, text="Forgot Password?", fg_color="gray20",
+            command=self.forgot_password_page
+        )
         forgot_btn.pack(pady=5)
 
-    # Login logic
     def login_user(self):
         email = self.login_email.get()
         password = self.login_password.get()
@@ -74,7 +79,7 @@ class App(ctk.CTk):
             self.current_user = email
             if email not in user_registrations:
                 user_registrations[email] = set()
-            self.dashboard_page()
+            self.my_events_page()
         else:
             messagebox.showerror("Error", "Invalid email or password")
 
@@ -99,7 +104,9 @@ class App(ctk.CTk):
         self.email_entry = ctk.CTkEntry(frame, placeholder_text="Email", width=350)
         self.email_entry.pack(pady=10)
 
-        self.password_entry = ctk.CTkEntry(frame, placeholder_text="Password", width=350, show="*")
+        self.password_entry = ctk.CTkEntry(
+            frame, placeholder_text="Password", width=350, show="*"
+        )
         self.password_entry.pack(pady=10)
 
         create_btn = ctk.CTkButton(frame, text="Create", command=self.create_account)
@@ -115,26 +122,18 @@ class App(ctk.CTk):
         email = self.email_entry.get()
         password = self.password_entry.get()
 
-        # Validate fields
         if not all([first, last, email, password]):
             messagebox.showerror("Error", "All fields required.")
             return
 
-        # Check if email exists
         if email in users:
             messagebox.showerror("Error", "Account already exists.")
             return
 
-        # Create user
-        users[email] = {
-            "first": first,
-            "last": last,
-            "password": password,
-            "role": "user"
-        }
+        users[email] = {"first": first, "last": last, "password": password, "role": "user"}
+        user_registrations[email] = set()
 
         messagebox.showinfo("Success", "Account created successfully!")
-
         self.login_page()
 
     # ------------------------------
@@ -152,10 +151,12 @@ class App(ctk.CTk):
         self.reset_email = ctk.CTkEntry(frame, placeholder_text="Enter your email")
         self.reset_email.pack(pady=10)
 
-        reset_btn = ctk.CTkButton(frame, text="Send Reset Link", command=self.reset_password)
+        reset_btn = ctk.CTkButton(frame, text="Send Reset Link",
+                                  command=self.reset_password)
         reset_btn.pack(pady=20)
 
-        back_btn = ctk.CTkButton(frame, text="Back", fg_color="gray20", command=self.login_page)
+        back_btn = ctk.CTkButton(frame, text="Back", fg_color="gray20",
+                                 command=self.login_page)
         back_btn.pack(pady=10)
 
     def reset_password(self):
@@ -169,33 +170,83 @@ class App(ctk.CTk):
         self.login_page()
 
     # ------------------------------
-    # DASHBOARD PAGE
+    # MY EVENTS PAGE (NEW HOME PAGE)
+    # ------------------------------
+    def my_events_page(self):
+        self.clear_window()
+
+        title = ctk.CTkLabel(self, text="My Registered Events",
+                             font=("Arial", 32, "bold"))
+        title.pack(pady=20)
+
+        scroll = ctk.CTkScrollableFrame(self, width=1000, height=650)
+        scroll.pack(pady=10)
+
+        user_events = user_registrations[self.current_user]
+
+        if not user_events:
+            ctk.CTkLabel(scroll, text="You are not registered for any events.",
+                         font=("Arial", 20)).pack(pady=20)
+        else:
+            for event_name in user_events:
+                frame = ctk.CTkFrame(scroll, corner_radius=15)
+                frame.pack(fill="x", padx=20, pady=10)
+
+                ctk.CTkLabel(frame, text=event_name, font=("Arial", 22, "bold")).pack(side="left", padx=20)
+
+                cancel_btn = ctk.CTkButton(
+                    frame, text="Cancel",
+                    fg_color="red", hover_color="#992222",
+                    command=lambda e=event_name: self.cancel_event(e)
+                )
+                cancel_btn.pack(side="right", padx=20)
+
+        browse_btn = ctk.CTkButton(self, text="Browse Events",
+                                   fg_color="green",
+                                   command=self.dashboard_page)
+        browse_btn.pack(pady=20)
+
+        logout_btn = ctk.CTkButton(self, text="Logout", fg_color="red",
+                                   command=self.login_page)
+        logout_btn.pack()
+
+    # ------------------------------
+    # EVENTS DASHBOARD
     # ------------------------------
     def dashboard_page(self):
         self.clear_window()
 
-        title = ctk.CTkLabel(self, text="Available Events", font=("Arial", 32, "bold"))
+        title = ctk.CTkLabel(self, text="Available Events",
+                             font=("Arial", 32, "bold"))
         title.pack(pady=20)
 
-        scroll = ctk.CTkScrollableFrame(self, width=1000, height=700)
+        scroll = ctk.CTkScrollableFrame(self, width=1000, height=650)
         scroll.pack(pady=10)
 
         for event_name, data in events.items():
             self.build_event_row(scroll, event_name, data)
 
-        logout_btn = ctk.CTkButton(self, text="Logout", fg_color="red", command=self.login_page)
-        logout_btn.pack(pady=20)
+        home_btn = ctk.CTkButton(self, text="Home", fg_color="#3a6ea5",
+                                 command=self.my_events_page)
+        home_btn.pack(pady=10)
 
+        logout_btn = ctk.CTkButton(self, text="Logout",
+                                   fg_color="red",
+                                   command=self.login_page)
+        logout_btn.pack(pady=10)
+
+    # Build a row in the events dashboard
     def build_event_row(self, parent, event_name, data):
         frame = ctk.CTkFrame(parent, height=100, corner_radius=15)
         frame.pack(fill="x", padx=20, pady=10)
 
         title = ctk.CTkLabel(frame, text=event_name, font=("Arial", 22, "bold"))
-        title.grid(row=0, column=0, padx=20, pady=20, sticky="w")
+        title.grid(row=0, column=0, padx=20, sticky="w")
 
         remaining = data["capacity"] - data["registered"]
 
-        spots = ctk.CTkLabel(frame, text=f"Available Spots: {remaining}", font=("Arial", 18))
+        spots = ctk.CTkLabel(frame, text=f"Available Spots: {remaining}",
+                             font=("Arial", 18))
         spots.grid(row=0, column=1, padx=20)
 
         user_events = user_registrations[self.current_user]
@@ -221,21 +272,23 @@ class App(ctk.CTk):
 
         event["registered"] += 1
         user_registrations[self.current_user].add(event_name)
-        self.dashboard_page()
+        self.my_events_page()
 
     def cancel_event(self, event_name):
         event = events[event_name]
 
-        event["registered"] -= 1
-        user_registrations[self.current_user].remove(event_name)
-        self.dashboard_page()
+        if event_name in user_registrations[self.current_user]:
+            user_registrations[self.current_user].remove(event_name)
+            event["registered"] -= 1
 
-    # Clear the window
+        self.my_events_page()
+
+    # Clear window
     def clear_window(self):
         for widget in self.winfo_children():
             widget.destroy()
 
 
-# Run app
+# Run the app
 app = App()
 app.mainloop()
